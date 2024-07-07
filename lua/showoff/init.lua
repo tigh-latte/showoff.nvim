@@ -190,6 +190,7 @@ function M.toggle()
 
 				close_window()
 				open_window()
+				M.render()
 			end,
 		})
 
