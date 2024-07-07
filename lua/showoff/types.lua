@@ -29,6 +29,7 @@
 ---@field bufnr integer
 ---@field display_start integer
 ---@field cell_start integer
+---@field augroup integer
 ---@field timer uv_timer_t
 
 ---@class showoff.state.input

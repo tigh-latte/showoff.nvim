@@ -8,6 +8,7 @@ local M = {
 		input = {},
 		win = -1,
 		bufnr = -1,
+		augroup = -1,
 		display_start = 0,
 		cell_start = 0,
 		timer = vim.uv.new_timer(),
@@ -181,9 +182,9 @@ function M.toggle()
 			M.render()
 		end), ns)
 
-		local augroup = vim.api.nvim_create_augroup("tigh-latte.showoff", { clear = true })
+		M.state.augroup = vim.api.nvim_create_augroup("tigh-latte.showoff", { clear = true })
 		vim.api.nvim_create_autocmd("VimResized", {
-			group = augroup,
+			group = M.state.augroup,
 			pattern = "*",
 			callback = function()
 				if not M.state.active then return end
@@ -196,7 +197,7 @@ function M.toggle()
 
 		if #M.config.input.modes > 0 and M.config.hide.excluded then
 			vim.api.nvim_create_autocmd("ModeChanged", {
-				group = augroup,
+				group = M.state.augroup,
 				pattern = "*",
 				callback = vim.schedule_wrap(function()
 					if not M.state.active then return end
@@ -207,7 +208,7 @@ function M.toggle()
 
 		if #M.config.input.exclude_fts > 0 and M.config.hide.excluded then
 			vim.api.nvim_create_autocmd("BufEnter", {
-				group = augroup,
+				group = M.state.augroup,
 				pattern = "*",
 				callback = vim.schedule_wrap(function()
 					if not M.state.active then return end
@@ -222,7 +223,7 @@ function M.toggle()
 		M.render()
 	else
 		vim.on_key(nil, ns)
-		vim.api.nvim_del_augroup_by_name("tigh-latte.showoff")
+		vim.api.nvim_del_augroup_by_id(M.state.augroup)
 
 		close_window()
 
