@@ -9,41 +9,104 @@ local M = {
 		win = -1,
 		bufnr = -1,
 		display_start = 0,
+		cell_start = 0,
 		timer = vim.uv.new_timer(),
 	},
 
 	---@type showoff.config
 	config = {
-		modes = {},
-		hide_excluded_mode = false,
 		active = false,
-		window_width = 30,
-		max_tracked = 50,
-		keys = {
-			["<SPACE>"] = "␣",
-			["<LEFT>"] = "",
-			["<RIGHT>"] = "",
-			["<UP>"] = "",
-			["<DOWN>"] = "",
-			["<ESC>"] = "Esc",
-			["<TAB>"] = "󰌒",
-			["<CR>"] = "󰌑",
+		window = {
+			enable = true,
+			width = 35,
+			height = 3,
 		},
-		exclude_keys = {
-			[":"] = true,
+		input = {
+			modes = {},
+			max_tracked = 50,
+			remap = {
+				["<Space>"] = "␣",
+				["<Left>"] = "",
+				["<Right>"] = "",
+				["<Up>"] = "",
+				["<Down>"] = "",
+				["<Esc>"] = "Esc",
+				["<Tab>"] = "󰌒",
+				["<CR>"] = "󰌑",
+				["<F1>"] = "F1",
+				["<F2>"] = "F2",
+				["<F3>"] = "F3",
+				["<F4>"] = "F4",
+				["<F5>"] = "F5",
+				["<F6>"] = "F6",
+				["<F7>"] = "F7",
+				["<F8>"] = "F8",
+				["<F9>"] = "F9",
+				["<F10>"] = "F10",
+				["<F11>"] = "F11",
+				["<F12>"] = "F12",
+			},
+			exclude_keys = {},
+			exclude_fts = {},
+			mouse = false,
+			deduplicate_at = 4,
 		},
-		hide_on_ft = {},
-		compact_at = 4,
-		hide_after = 4000,
-		exclude_mouse = true,
+		hide = {
+			after = 4000,
+			excluded = true,
+		},
 	},
 }
+
+--- decide whether or not to display
+local function draw_window()
+	if not M.config.window.enable then return end
+	local display = #M.config.input.modes == 0 or vim.tbl_contains(M.config.input.modes, vim.api.nvim_get_mode().mode)
+	display = display and
+		(#M.config.input.exclude_fts == 0 or not vim.tbl_contains(M.config.input.exclude_fts, vim.bo.ft))
+	vim.api.nvim_win_set_config(M.state.win, { hide = not display })
+end
+
+local function open_window()
+	if not M.config.window.enable then return end
+	if M.state.bufnr > 0 or M.state.win > 0 then
+		return
+	end
+	M.state.bufnr = vim.api.nvim_create_buf(false, true)
+	M.state.win = vim.api.nvim_open_win(0, false, {
+		hide = #M.state.input == 0,
+		relative = "editor",
+		width = M.config.window.width,
+		height = M.config.window.height,
+		row = vim.o.lines - vim.o.cmdheight - 1,
+		col = vim.o.columns,
+		anchor = "SE",
+		focusable = false,
+		style = "minimal",
+		noautocmd = true,
+	})
+	vim.api.nvim_win_set_buf(M.state.win, M.state.bufnr)
+end
+
+local function close_window()
+	if not M.config.window.enable then return end
+	if M.state.win > -1 then
+		vim.api.nvim_win_close(M.state.win, true)
+		M.state.win = -1
+	end
+
+	if M.state.bufnr > -1 then
+		vim.api.nvim_buf_delete(M.state.bufnr, { force = true })
+		M.state.bufnr = -1
+	end
+end
+
 
 ---@param config? showoff.config
 function M.setup(config)
 	M.config = vim.tbl_deep_extend("force", M.config, config or {})
-	if M.config.exclude_mouse then
-		M.config.exclude_keys = vim.tbl_deep_extend("keep", M.config.exclude_keys, {
+	if not M.config.input.mouse then
+		M.config.input.exclude_keys = vim.tbl_deep_extend("keep", M.config.input.exclude_keys, {
 			["<MouseMove>"] = true,
 			["<LeftMouse>"] = true,
 			["<LeftRelease>"] = true,
@@ -88,6 +151,8 @@ function M.setup(config)
 	if M.config.active then
 		vim.cmd.Showoff()
 	end
+
+	return M
 end
 
 ---toggle showoff
@@ -98,20 +163,20 @@ function M.toggle()
 			if not M.state.active then return end
 			if typed == "" then return end
 			typed = vim.fn.keytrans(typed)
-			if M.config.exclude_keys[typed] then return end
+			if M.config.input.exclude_keys[typed] then return end
 
-			if #M.config.hide_on_ft > 0 and vim.tbl_contains(M.config.hide_on_ft, vim.bo.ft) then
+			if #M.config.input.exclude_fts > 0 and vim.tbl_contains(M.config.input.exclude_fts, vim.bo.ft) then
 				return
 			end
 
-			if #M.config.modes > 0 then
+			if #M.config.input.modes > 0 then
 				local mode = vim.api.nvim_get_mode().mode
-				if not vim.tbl_contains(M.config.modes, mode) then
+				if not vim.tbl_contains(M.config.input.modes, mode) then
 					return
 				end
 			end
 
-			vim.api.nvim_win_set_config(M.state.win, { hide = not M.decide_display() })
+			draw_window()
 			M.update_state(typed)
 			M.render()
 		end), ns)
@@ -123,90 +188,58 @@ function M.toggle()
 			callback = function()
 				if not M.state.active then return end
 
-				vim.api.nvim_win_close(M.state.win, true)
-				M.state.win = vim.api.nvim_open_win(0, false, {
-					relative = "editor",
-					width = M.config.window_width,
-					height = 3,
-					row = vim.o.lines - vim.o.cmdheight - 1,
-					col = vim.o.columns,
-					anchor = "SE",
-					focusable = false,
-					style = "minimal",
-					noautocmd = true,
-				})
-				vim.api.nvim_win_set_buf(M.state.win, M.state.bufnr)
+				close_window()
+				open_window()
 			end,
 		})
 
-		if #M.config.modes > 0 and M.config.hide_excluded_mode then
+		if #M.config.input.modes > 0 and M.config.hide.excluded then
 			vim.api.nvim_create_autocmd("ModeChanged", {
 				group = augroup,
 				pattern = "*",
 				callback = vim.schedule_wrap(function()
 					if not M.state.active then return end
-
-					local win_config = vim.api.nvim_win_get_config(M.state.win)
-					win_config.hide = not M.decide_display()
-					vim.api.nvim_win_set_config(M.state.win, win_config)
+					draw_window()
 				end),
 			})
 		end
 
-		if #M.config.hide_on_ft > 0 then
+		if #M.config.input.exclude_fts > 0 and M.config.hide.excluded then
 			vim.api.nvim_create_autocmd("BufEnter", {
 				group = augroup,
 				pattern = "*",
 				callback = vim.schedule_wrap(function()
 					if not M.state.active then return end
-
-					local win_config = vim.api.nvim_win_get_config(M.state.win)
-					win_config.hide = not M.decide_display()
-					vim.api.nvim_win_set_config(M.state.win, win_config)
+					draw_window()
 				end),
 			})
 		end
 
 
-		M.state.bufnr = vim.api.nvim_create_buf(false, true)
-		M.state.win = vim.api.nvim_open_win(0, false, {
-			hide = #M.state.input == 0,
-			relative = "editor",
-			width = M.config.window_width,
-			height = 3,
-			row = vim.o.lines - vim.o.cmdheight - 1,
-			col = vim.o.columns,
-			anchor = "SE",
-			focusable = false,
-			style = "minimal",
-			noautocmd = true,
-		})
-		vim.api.nvim_win_set_buf(M.state.win, M.state.bufnr)
+		open_window()
 
 		M.render()
 	else
 		vim.on_key(nil, ns)
 		vim.api.nvim_del_augroup_by_name("tigh-latte.showoff")
 
-		vim.api.nvim_win_close(M.state.win, true)
-		M.state.win = -1
-
-		vim.api.nvim_buf_delete(M.state.bufnr, { force = true })
-		M.state.bufnr = -1
+		close_window()
 
 		M.state.input = {}
 		M.state.display_start = 0
+		M.state.cell_start = 0
+		M.state.timer:stop()
 	end
 end
 
 function M.render()
-	M.handler(M.transform())
+	M.display(M.transform())
 end
 
 ---update the state
 ---@param key string
 function M.update_state(key)
-	key = M.config.keys[string.upper(key)] or key
+	key = M.config.input.remap[key] or key
 	if #M.state.input == 0 then
 		table.insert(M.state.input, { char = key, count = 1 })
 	else
@@ -217,18 +250,20 @@ function M.update_state(key)
 			last_input.count = last_input.count + 1
 		end
 	end
-	if #M.state.input > M.config.max_tracked then
-		M.state.input = { unpack(M.state.input, #M.state.input - M.config.max_tracked + 1, #M.state.input) }
+	if #M.state.input > M.config.input.max_tracked then
+		M.state.input = { unpack(M.state.input, #M.state.input - M.config.input.max_tracked + 1, #M.state.input) }
 	end
 
-	M.state.timer:stop()
-	M.state.timer:start(M.config.hide_after, 0, vim.schedule_wrap(function()
+	if M.config.window.enable and M.config.hide.after > 0 then
 		M.state.timer:stop()
-		if not M.state.active then return end
-		if not M.state.win == -1 then return end
+		M.state.timer:start(M.config.hide.after, 0, vim.schedule_wrap(function()
+			M.state.timer:stop()
+			if not M.state.active then return end
+			if not M.state.win == -1 then return end
 
-		vim.api.nvim_win_set_config(M.state.win, { hide = true })
-	end))
+			vim.api.nvim_win_set_config(M.state.win, { hide = true })
+		end))
+	end
 end
 
 ---transform an input into a string
@@ -240,34 +275,27 @@ function M.transform()
 	local bldr = {}
 	for i = #M.state.input, 1, -1 do
 		local input = M.state.input[i]
-		local render = input.count < M.config.compact_at and string.rep or function(s, n, _)
+		local render = input.count < M.config.input.deduplicate_at and string.rep or function(s, n, _)
 			return table.concat({ s, "..x", n }, "")
 		end
 		table.insert(bldr, 1, " ")
 		table.insert(bldr, 1, render(input.char, input.count, " "))
 		cell_width = cell_width + 1 + vim.api.nvim_strwidth(bldr[1])
 		len = len + 1 + #bldr[1]
-		if cell_width <= M.config.window_width then
+		if cell_width <= M.config.window.width - 1 then
 			M.state.display_start = len
+			M.state.cell_start = cell_width
 		end
 	end
 
 	return table.concat(bldr, "")
 end
 
---- decide whether or not to display
----@return boolean
-function M.decide_display()
-	local display = #M.config.modes == 0 or vim.tbl_contains(M.config.modes, vim.api.nvim_get_mode().mode)
-	display = display and (#M.config.hide_on_ft == 0 or not vim.tbl_contains(M.config.hide_on_ft, vim.bo.ft))
-	return display
-end
-
 ---Text handler
 ---@param line string the line to render
-function M.handler(line)
+function M.display(line)
 	local to_print = line:sub(-M.state.display_start)
-	to_print = string.rep(" ", M.config.window_width - M.state.display_start) .. to_print
+	to_print = string.rep(" ", M.config.window.width - M.state.cell_start) .. to_print
 	vim.api.nvim_buf_set_lines(M.state.bufnr, 1, 2, false, { to_print })
 end
 
