@@ -16,7 +16,7 @@ Using [lazy](https://github.com/folke/lazy.nvim.git):
 
 ```lua
 {
-    "github.com/tigh-latte/showoff.nvim",
+    "tigh-latte/showoff.nvim",
     config = function()
         require("showoff").setup({})
     end,
