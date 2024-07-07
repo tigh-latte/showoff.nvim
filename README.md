@@ -70,6 +70,10 @@ Using [lazy](https://github.com/folke/lazy.nvim.git):
 }
 ```
 
+### Using
+
+Just run `:Showoff` and start typing. To disable, just run `:Showoff` again.
+
 ### Overriding `display(string)`
 
 If you just want to use this as an engine for turning key presses into a formatted string, but you want that string to be displayed somewhere else, you can do as follows:
