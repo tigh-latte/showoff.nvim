@@ -53,7 +53,7 @@ local M = {
 			deduplicate_at = 4,
 		},
 		hide = {
-			after = 4000,
+			after = 3500,
 			excluded = true,
 		},
 	},
