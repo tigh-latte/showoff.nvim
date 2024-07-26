@@ -8,7 +8,7 @@ There is no reason to use this over [Screenkey](https://github.com/NStefan002/sc
 
 1. Whitelist modes. So, for example, don't display input when typing in insert of command mode.
 1. Exclude filetypes.
-1. Allows for you to override `display` function, just incase you want to send your output somewhere other than neovim.
+1. Allows for you to override `handler` function, just incase you want to send your output somewhere other than neovim.
 
 ### Installation
 
@@ -29,7 +29,7 @@ Using [lazy](https://github.com/folke/lazy.nvim.git):
 {
     active = false, -- Enable at startup.
     window = { -- Window options
-        enable = true, -- Enable to floating window. This should be set to false if you override showoff.display(string)
+        enable = true, -- Enable to floating window. This should be set to false if you override handler(string)
         width = 35,
         height = 3,
     },
@@ -74,25 +74,25 @@ Using [lazy](https://github.com/folke/lazy.nvim.git):
 
 Just run `:Showoff` and start typing. To disable, just run `:Showoff` again.
 
-### Overriding `display(string)`
+### Overriding `handler(string)`
 
 If you just want to use this as an engine for turning key presses into a formatted string, but you want that string to be displayed somewhere else, you can do as follows:
 
 ```lua
-local showoff = require("showoff").setup({
+require("showoff").setup({
     window = { enable = false },
-})
-showoff.display = function(line)
+    handler = function(line)
     -- Do whatever you want with line.
-end
+    end
+})
 ```
 
 If you want to instead keep your input going to the floating window, and wish to add extra functionality:
 ```lua
-local showoff = require("showoff").setup({})
-local display = showoff.display
-showoff.display = function(line)
-    display(line)
-    -- Do whatever else you want with line.
-end
+require("showoff").setup({
+    handler = function(line)
+        require("showoff").display(line)
+        -- Do whatever else you want with line.
+    end
+})
 ```

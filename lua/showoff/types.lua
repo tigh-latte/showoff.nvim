@@ -3,6 +3,7 @@
 ---@field input? showoff.config.input
 ---@field hide? showoff.config.hide
 ---@field window? showoff.config.window
+---@field handler? function(string)
 
 ---@class showoff.config.input
 ---@field modes? string[]

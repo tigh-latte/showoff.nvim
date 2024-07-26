@@ -106,6 +106,7 @@ end
 ---@param config? showoff.config
 function M.setup(config)
 	M.config = vim.tbl_deep_extend("force", M.config, config or {})
+	M.config.handler = M.config.handler or M.display
 	if not M.config.input.mouse then
 		M.config.input.exclude_keys = vim.tbl_deep_extend("keep", M.config.input.exclude_keys, {
 			["<MouseMove>"] = true,
@@ -235,7 +236,7 @@ function M.toggle()
 end
 
 function M.render()
-	M.display(M.transform())
+	M.config.handler(M.transform())
 end
 
 ---update the state
@@ -296,6 +297,8 @@ end
 ---Text handler
 ---@param line string the line to render
 function M.display(line)
+	if not M.config.window.enable then return end
+
 	local to_print = line:sub(-M.state.display_start)
 	to_print = string.rep(" ", M.config.window.width - M.state.cell_start) .. to_print
 	vim.api.nvim_buf_set_lines(M.state.bufnr, 1, 2, false, { to_print })
