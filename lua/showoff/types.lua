@@ -9,7 +9,7 @@
 ---@field modes? string[]
 ---@field remap? table<string, string>
 ---@field max_tracked? integer
----@field exclude_keys? table<string, boolean>
+---@field exclude_keys? string[]
 ---@field mouse? boolean
 ---@field exclude_fts? string[]
 ---@field deduplicate_at? integer

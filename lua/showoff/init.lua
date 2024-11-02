@@ -59,22 +59,13 @@ local M = {
 	},
 }
 
---- decide whether or not to display
-local function draw_window()
-	if not M.config.window.enable then return end
-	local display = #M.config.input.modes == 0 or vim.tbl_contains(M.config.input.modes, vim.api.nvim_get_mode().mode)
-	display = display and
-		(#M.config.input.exclude_fts == 0 or not vim.tbl_contains(M.config.input.exclude_fts, vim.bo.ft))
-	vim.api.nvim_win_set_config(M.state.win, { hide = not display })
-end
-
 local function open_window()
 	if not M.config.window.enable then return end
 	if M.state.bufnr > 0 or M.state.win > 0 then
 		return
 	end
 	M.state.bufnr = vim.api.nvim_create_buf(false, true)
-	M.state.win = vim.api.nvim_open_win(0, false, {
+	M.state.win = vim.api.nvim_open_win(M.state.bufnr, false, {
 		hide = #M.state.input == 0,
 		relative = "editor",
 		width = M.config.window.width,
@@ -86,8 +77,23 @@ local function open_window()
 		style = "minimal",
 		noautocmd = true,
 	})
-	vim.api.nvim_win_set_buf(M.state.win, M.state.bufnr)
 end
+
+--- decide whether or not to display
+local function draw_window()
+	if not M.config.window.enable then return end
+	local display = #M.config.input.modes == 0 or vim.tbl_contains(M.config.input.modes, vim.api.nvim_get_mode().mode)
+	display = display and
+		(#M.config.input.exclude_fts == 0 or not vim.tbl_contains(M.config.input.exclude_fts, vim.bo.ft))
+
+	if not pcall(vim.api.nvim_win_set_config, M.state.win, { hide = not display }) then
+		M.state.bufnr = -1
+		M.state.win = -1
+		open_window()
+		M.render()
+	end
+end
+
 
 local function close_window()
 	if not M.config.window.enable then return end
@@ -105,7 +111,16 @@ end
 
 ---@param config? showoff.config
 function M.setup(config)
+	config = config or {}
+
+	local k = {}
+	for _, ignore in ipairs(config.input.exclude_keys or {}) do
+		k[ignore] = true
+	end
+	config.input.exclude_keys = k
+
 	M.config = vim.tbl_deep_extend("force", M.config, config or {})
+
 	M.config.handler = M.config.handler or M.display
 	if not M.config.input.mouse then
 		M.config.input.exclude_keys = vim.tbl_deep_extend("keep", M.config.input.exclude_keys, {
@@ -146,6 +161,8 @@ function M.setup(config)
 			["<4-MiddleMouse>"] = true,
 			["<4-MiddleRelease>"] = true,
 			["<4-MiddleDrag>"] = true,
+			["<ScrollWheelUp>"] = true,
+			["<ScrollWheelDown>"] = true,
 		})
 	end
 
@@ -189,7 +206,6 @@ function M.toggle()
 			pattern = "*",
 			callback = function()
 				if not M.state.active then return end
-
 				close_window()
 				open_window()
 				M.render()
@@ -299,9 +315,9 @@ end
 function M.display(line)
 	if not M.config.window.enable then return end
 
-	local to_print = line:sub(-M.state.display_start)
-	to_print = string.rep(" ", M.config.window.width - M.state.cell_start) .. to_print
-	vim.api.nvim_buf_set_lines(M.state.bufnr, 1, 2, false, { to_print })
+	local output = line:sub(-M.state.display_start)
+	local padding = string.rep(" ", M.config.window.width - M.state.cell_start)
+	vim.api.nvim_buf_set_lines(M.state.bufnr, 1, 2, false, { padding .. output })
 end
 
 return M

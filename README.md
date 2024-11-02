@@ -58,7 +58,7 @@ Using [lazy](https://github.com/folke/lazy.nvim.git):
             ["<F11>"] = "F11",
             ["<F12>"] = "F12",
         },
-        exclude_keys = {}, -- table<string, boolean> of keys to exclude.
+        exclude_keys = {}, -- string[] of keys to exclude.
         exclude_fts = {}, -- list of filetypes to exclude
         mouse = false, -- display mouse clicks.
         deduplicate_at = 4, -- when to deduplicate consecutive keystrokes (j j j j -> j..x4)
