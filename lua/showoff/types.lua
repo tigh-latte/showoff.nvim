@@ -22,6 +22,7 @@
 ---@field enable? boolean
 ---@field width? integer
 ---@field height? integer
+---@field display_in_excluded_mode? boolean
 
 ---@class showoff.state
 ---@field active boolean
@@ -31,7 +32,7 @@
 ---@field display_start integer
 ---@field cell_start integer
 ---@field augroup integer
----@field timer uv_timer_t
+---@field timer uv_timer_t?
 
 ---@class showoff.state.input
 ---@field char string

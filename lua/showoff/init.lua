@@ -21,6 +21,7 @@ local M = {
 			enable = true,
 			width = 35,
 			height = 3,
+			display_in_excluded_mode = false,
 		},
 		input = {
 			modes = {},
@@ -82,9 +83,15 @@ end
 --- decide whether or not to display
 local function draw_window()
 	if not M.config.window.enable then return end
-	local display = #M.config.input.modes == 0 or vim.tbl_contains(M.config.input.modes, vim.api.nvim_get_mode().mode)
+
+	local display = true
+	if not M.config.window.display_in_excluded_mode then
+		display = #M.config.input.modes == 0 or vim.tbl_contains(M.config.input.modes, vim.api.nvim_get_mode().mode)
+	end
 	display = display and
 		(#M.config.input.exclude_fts == 0 or not vim.tbl_contains(M.config.input.exclude_fts, vim.bo.ft))
+
+	-- print(M.config.window.display_in_excluded_mode, display)
 
 	if not pcall(vim.api.nvim_win_set_config, M.state.win, { hide = not display }) then
 		M.state.bufnr = -1
@@ -233,7 +240,6 @@ function M.toggle()
 				end),
 			})
 		end
-
 
 		open_window()
 
