@@ -1,9 +1,9 @@
 local ns = vim.api.nvim_create_namespace("tigh-latte.showoff")
 local unpack = table.unpack or unpack
-
 local M = {
 	---@type showoff.state
 	state = {
+		first_key = true,
 		active = false,
 		input = {},
 		win = -1,
@@ -197,9 +197,10 @@ function M.toggle()
 
 			if #M.config.input.modes > 0 then
 				local mode = vim.api.nvim_get_mode().mode
-				if not vim.tbl_contains(M.config.input.modes, mode) then
+				if not vim.tbl_contains(M.config.input.modes, mode) and not M.state.first_key then
 					return
 				end
+				M.state.first_key = false
 			end
 
 			draw_window()
@@ -223,10 +224,14 @@ function M.toggle()
 			vim.api.nvim_create_autocmd("ModeChanged", {
 				group = M.state.augroup,
 				pattern = "*",
-				callback = vim.schedule_wrap(function()
-					if not M.state.active then return end
-					draw_window()
-				end),
+				callback = function()
+					M.state.first_key = true
+
+					vim.schedule(function()
+						if not M.state.active then return end
+						draw_window()
+					end)
+				end,
 			})
 		end
 

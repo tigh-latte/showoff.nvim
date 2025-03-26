@@ -33,6 +33,7 @@
 ---@field cell_start integer
 ---@field augroup integer
 ---@field timer uv_timer_t?
+---@field first_key boolean?
 
 ---@class showoff.state.input
 ---@field char string
